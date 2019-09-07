@@ -174,10 +174,6 @@ fn run_test(device: c.cl_device_id) CLError!void {
 }
 
 pub fn main() anyerror!void {
-
-    //for (input_array) |val| {
-    //    warn("{}\n", val);
-    //}
     var device = try get_cl_device();
     try run_test(device);
 }
