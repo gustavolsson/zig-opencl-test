@@ -12,7 +12,11 @@ pub fn build(b: *Builder) void {
         exe.addLibPath("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64");
     }
     exe.linkSystemLibrary("c");
-    exe.linkSystemLibrary("OpenCL");
+    if (builtin.os == .macosx) {
+        exe.linkFramework("OpenCL");
+    } else {
+        exe.linkSystemLibrary("OpenCL");
+    }
     exe.install();
 
     const run_cmd = exe.run();
