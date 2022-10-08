@@ -1,17 +1,17 @@
 const std = @import("std");
-const warn = std.debug.warn;
+const info = std.log.info;
 
 const c = @cImport({
     @cDefine("CL_TARGET_OPENCL_VERSION", "110");
     @cInclude("CL/cl.h");
 });
 
-var program_src =
-    c\\__kernel void square_array(__global int* input_array, __global int* output_array) {
-    c\\    int i = get_global_id(0);
-    c\\    int value = input_array[i];
-    c\\    output_array[i] = value * value;
-    c\\}
+const program_src =
+    \\__kernel void square_array(__global int* input_array, __global int* output_array) {
+    \\    int i = get_global_id(0);
+    \\    int value = input_array[i];
+    \\    output_array[i] = value * value;
+    \\}
 ;
 
 const CLError = error{
@@ -39,7 +39,7 @@ fn get_cl_device() CLError!c.cl_device_id {
     if (c.clGetPlatformIDs(platform_ids.len, &platform_ids, &platform_count) != c.CL_SUCCESS) {
         return CLError.GetPlatformsFailed;
     }
-    warn("{} cl platform(s) found:\n", @intCast(u32, platform_count));
+    info("{} cl platform(s) found:", .{@intCast(u32, platform_count)});
 
     for (platform_ids[0..platform_count]) |id, i| {
         var name: [1024]u8 = undefined;
@@ -47,21 +47,21 @@ fn get_cl_device() CLError!c.cl_device_id {
         if (c.clGetPlatformInfo(id, c.CL_PLATFORM_NAME, name.len, &name, &name_len) != c.CL_SUCCESS) {
             return CLError.GetPlatformInfoFailed;
         }
-        warn("  platform {}: {}\n", i, name[0..name_len]);
+        info("  platform {}: {s}", .{ i, name[0..name_len] });
     }
 
     if (platform_count == 0) {
         return CLError.NoPlatformsFound;
     }
 
-    warn("choosing platform 0...\n");
+    info("choosing platform 0...", .{});
 
     var device_ids: [16]c.cl_device_id = undefined;
     var device_count: c.cl_uint = undefined;
     if (c.clGetDeviceIDs(platform_ids[0], c.CL_DEVICE_TYPE_ALL, device_ids.len, &device_ids, &device_count) != c.CL_SUCCESS) {
         return CLError.GetDevicesFailed;
     }
-    warn("{} cl device(s) found on platform 0:\n", @intCast(u32, device_count));
+    info("{} cl device(s) found on platform 0:", .{@intCast(u32, device_count)});
 
     for (device_ids[0..device_count]) |id, i| {
         var name: [1024]u8 = undefined;
@@ -69,20 +69,20 @@ fn get_cl_device() CLError!c.cl_device_id {
         if (c.clGetDeviceInfo(id, c.CL_DEVICE_NAME, name.len, &name, &name_len) != c.CL_SUCCESS) {
             return CLError.GetDeviceInfoFailed;
         }
-        warn("  device {}: {}\n", i, name[0..name_len]);
+        info("  device {}: {s}", .{ i, name[0..name_len] });
     }
 
     if (device_count == 0) {
         return CLError.NoDevicesFound;
     }
 
-    warn("choosing device 0...\n");
+    info("choosing device 0...", .{});
 
     return device_ids[0];
 }
 
 fn run_test(device: c.cl_device_id) CLError!void {
-    warn("** running test **\n");
+    info("** running test **", .{});
 
     var ctx = c.clCreateContext(null, 1, &device, null, null, null); // future: last arg is error code
     if (ctx == null) {
@@ -111,7 +111,7 @@ fn run_test(device: c.cl_device_id) CLError!void {
         return CLError.BuildProgramFailed;
     }
 
-    var kernel = c.clCreateKernel(program, c"square_array", null);
+    var kernel = c.clCreateKernel(program, "square_array", null);
     if (kernel == null) {
         return CLError.CreateKernelFailed;
     }
@@ -162,15 +162,17 @@ fn run_test(device: c.cl_device_id) CLError!void {
         return CLError.EnqueueReadBufferFailed;
     }
 
-    warn("** done **\n");
+    info("** done **", .{});
 
-    warn("** results **\n");
+    info("** results **", .{});
 
     for (output_array) |val, i| {
-        warn("{} ^ 2 = {}\n", i, val);
+        if (i % 100 == 0) {
+            info("{} ^ 2 = {}", .{ i, val });
+        }
     }
 
-    warn("** done, exiting **\n");
+    info("** done, exiting **", .{});
 }
 
 pub fn main() anyerror!void {
